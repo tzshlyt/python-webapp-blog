@@ -5,6 +5,7 @@ import logging
 import threading
 import functools
 import time
+import uuid
 
 engine = None
 
@@ -22,6 +23,11 @@ class  Dict(dict):
 	
 	def __setattr__(self, key, value):
 		self[key] = value
+
+def next_id(t=None):
+	if t is None:
+		t = time.time()
+	return '%015d%s000' % (int(t * 1000), uuid.uuid4().hex)
 
 
 class _Engine(object):
@@ -47,6 +53,19 @@ def create_engine(user, password, database, host='127.0.0.1', port=3306, **kw):
 	engine = _Engine(lambda: conn)
 	logging.info('Init mysql engine <%s> ok.' % hex(id(engine)))
 
+
+def _profiling(start, sql=''):
+	t = time.time() - start
+	if t > 0.1:
+		logging.warning('[PROFILING] [DB] %s: %s' % (t, sql))
+	else:
+		logging.info('[PROFILING] [DB] %s: %s' % (t, sql))
+
+class DBError(Exception):
+	pass
+
+class MultiColumnsError(DBError):
+	pass
 
 class  _LasyConnection(object):    
 	def __init__(self):
@@ -88,6 +107,7 @@ class _DbCtx(threading.local):
 
 	def cleanup(self):
 		self.connection.cleanup()
+		self.connection = None
 
 	def cursor(self):
 		return self.connection.cursor()
@@ -119,6 +139,62 @@ def with_connection(func):
 			return func(*args, **kw)
 	return _wrapper
 
+
+class _TransactionCtx(object):
+	def __enter__(self):
+		global _db_ctx
+		self.should_close_conn = False
+		if not _db_ctx.is_init():
+			_db_ctx.init()
+			self.should_close_conn = True
+		_db_ctx.transactions = _db_ctx.transactions + 1
+		print "-------"
+		logging.info('begin transaction...' if _db_ctx.transactions==1 else 'join current transaction...')
+		return self
+
+	def __exit__(self, exctype, excvalue, traceback):
+		global _db_ctx
+		_db_ctx.transactions = _db_ctx.transactions - 1
+		try:
+			if _db_ctx.transactions == 0:
+				if exctype is None:
+					self.commit()
+				else:
+					self.rollback()
+		finally:
+			if self.should_close_conn:
+				_db_ctx.cleanup()
+
+	def commit(self):
+		global _db_ctx
+		logging.info('commit transaction...')
+		try:
+			_db_ctx.connection.commit()
+			logging.info('commit ok.')
+		except:
+			logging.warning('commit failed. try rollback...')
+			_db_ctx.connection.rollback()
+			logging.warning('rollback ok.')
+			raise
+
+	def rollback(self):
+		global _db_ctx
+		logging.warning('rollback transaction...')
+		_db_ctx.connection.rollback()
+		logging.info('rollback ok.')
+
+
+def transaction():
+	return _TransactionCtx()
+
+def with_transaction(func):
+	@functools.wraps(func)
+	def _wrapper(*args, **kw):
+		_start = time.time()
+		with _TransactionCtx():
+			return func(*args, **kw)
+		_profiling(_start)
+	return _wrapper
 
 
 def _select(sql, first, *args):
@@ -185,11 +261,6 @@ def insert(table, **kw):
 def update(sql, *args):
 	return _update(sql, *args)
 
-class DBError(Exception):
-	pass
-
-class MultiColumnsError(DBError):
-	pass
 
 if __name__ == '__main__':
 	logging.basicConfig(level=logging.DEBUG)
@@ -200,8 +271,10 @@ if __name__ == '__main__':
 	# r = insert('user', **u1)
 	# print r
 	print "======================"
-	k = select_int('select * from user')
-	print k
+
+	with transaction():
+		k = select_int('select count(*) from user where email=?', 'bob@test.org')
+	print k	
 	
 
 	
