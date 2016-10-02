@@ -11,7 +11,7 @@ engine = None
 
 class  Dict(dict):
 	def __init__(self, names=(), values=(), **kw):
-		super( Dict, self).__init__(**kw)
+		super(Dict, self).__init__(**kw)
 		for k, v in zip(names, values):
 			self[k] = v
 
@@ -49,8 +49,7 @@ def create_engine(user, password, database, host='127.0.0.1', port=3306, **kw):
 		params[k] = kw.pop(k, v)
 	params.update(kw)
 	params['buffered'] = True
-	conn = mysql.connector.connect(**params)
-	engine = _Engine(lambda: conn)
+	engine = _Engine(lambda: mysql.connector.connect(**params))
 	logging.info('Init mysql engine <%s> ok.' % hex(id(engine)))
 
 
@@ -123,6 +122,7 @@ class  _ConnectionCtx(object):
 		if not _db_ctx.is_init():
 			_db_ctx.init()
 			self.should_cleanup = True
+		return self
 
 	def __exit__(self, exctype, excvalue, traceback):
 		global _db_ctx
@@ -252,6 +252,7 @@ def _update(sql, *args):
 	finally:
 		if cursor:
 			cursor.close()
+			
 
 def insert(table, **kw):
 	cols, args = zip(*kw.iteritems())
@@ -265,16 +266,19 @@ def update(sql, *args):
 if __name__ == '__main__':
 	logging.basicConfig(level=logging.DEBUG)
 	create_engine('user', 'www-data', 'blogdb')
-	# update('drop table if exists user')
-	# update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
-	# u1 = dict(id=2001, name='Bob', email='bob@test.org', passwd='bobobob', last_modified=time.time())
+	update('drop table if exists user')
+	update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
+	# u1 = dict(id=20032, name='Bob', email='bob@test.org', passwd='bobobob', last_modified=time.time())
 	# r = insert('user', **u1)
-	# print r
+	# # print r
 	print "======================"
 
-	with transaction():
-		k = select_int('select count(*) from user where email=?', 'bob@test.org')
-	print k	
+	# with transaction():
+	print '---select_int(): '
+	print select_int('select count(*) from user where email=?', 'bob@test.org')
+
+	print '---select_one(): '
+	print select_one('select * from user')	
 	
 
 	
