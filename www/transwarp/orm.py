@@ -79,6 +79,15 @@ class FloatField(Field):
 		if 'ddl' not in kw:
 			kw['ddl'] = 'real'
 		super(FloatField, self).__init__(**kw)
+
+class BooleanField(Field):
+
+    def __init__(self, **kw):
+        if not 'default' in kw:
+            kw['default'] = False
+        if not 'ddl' in kw:
+            kw['ddl'] = 'bool'
+        super(BooleanField, self).__init__(**kw)
 												
 class TextField(Field):
 	def __init__(self, **kw):
@@ -191,6 +200,8 @@ class  Model(dict):
 
 	@classmethod
 	def find_first(cls, where, *args):
+		print where
+		print args
 		d = db.select_one('select * from %s %s' % (cls.__table__, where), *args)
 		return cls(**d) if d else None
 
@@ -268,8 +279,8 @@ if __name__ == '__main__':
 
 	db.create_engine('user', 'www-data', 'blogdb')
 
-	u = User(id=200, name='Michael', email='orm@db.org',passwd='123abc')
-	u.insert()
+	# u = User(id=200, name='Michael', email='orm@db.org',passwd='123abc')
+	# u.insert()
 
 	print '---delet(): '
 	g = User.get(2008)
@@ -292,8 +303,8 @@ if __name__ == '__main__':
 	print '---get(): '
 	print User.get(2000)
 
-	# print '---find_first(): '
-	# print User.find_first('name',('Bob'))
+	print '---find_first(): '
+	print User.find_first('where name=?','Michael')
 
 	print '---find_all(): '
 	print len(User.find_all())
