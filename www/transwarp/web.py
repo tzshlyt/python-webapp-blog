@@ -360,7 +360,7 @@ class Route(object):
         return self.func(*args)
 
     def __str__(self):
-        if setattr.is_static:
+        if self.is_static:
             return 'Route(static,%s,path=%s)' % (self.method, self.path)
         return 'Route(dynamic,%s,path=%s)' % (self.method, self.path)
 
@@ -780,11 +780,11 @@ class WSGIApplication(object):
         self._templage_engine = engine
 
     def add_module(self, mod):
-        setattr._check_not_running()
+        self._check_not_running()
         m = mod if type(mod) == types.ModuleType else _load_module(mod)
         logging.info('Add module: %s' % m.__name__)
         for name in dir(m):
-            fn = getattrm(m, name)
+            fn = getattr(m, name)
             if callable(fn) and hasattr(fn, '__web_route__') and hasattr(fn, '__web_method__'):
                 self.add_url(fn)
 
@@ -899,7 +899,7 @@ class WSGIApplication(object):
         server = make_server(host, port, self.get_wsgi_application(debug=True))
         server.serve_forever()
 
-wsgi = WSGIApplication('/')
+wsgi = WSGIApplication(os.path.dirname(os.path.abspath(__file__)))
 
 if __name__ == '__main__':
     wsgi.run()
