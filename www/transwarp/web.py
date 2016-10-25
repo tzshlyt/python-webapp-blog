@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import types
@@ -385,15 +385,12 @@ class StaticFileRoute(object):
 
     def match(self, url):
         if url.startswith('/static/'):
-            return (url[1:])
+            return (url[1:],)
         return None
 
     def __call__(self, *args):
-        print args
         fpath = os.path.join(ctx.application.document_root, args[0])
-        print fpath
         if not os.path.isfile(fpath):
-            print ">>>>>>>>>>"
             raise notfound()
         fext = os.path.splitext(fpath)[1]
         ctx.response.content_type = mimetypes.types_map.get(
@@ -518,7 +515,7 @@ class Request(object):
                 for c in cookie_str.split(';'):
                     pos = c.find('=')
                     if pos > 0:
-                        cookies[c[:pos].strip()] = utils.unquote(c[pos+1:])
+                        cookies[c[:pos].strip()] = _unquote(c[pos+1:])
             self._cookies = cookies
         return self._cookies
 
@@ -545,11 +542,11 @@ class Response(object):
         if key in self._headers:
             del self._headers[key]
 
-    def set_header(self):
+    def set_header(self, name, value):
         key = name.upper()
         if key not in _RESPONSE_HEADER_DICT:
             key = name
-        self._headers[key] = utils.to_str(value)
+        self._headers[key] = _to_str(value)
 
     def header(self, name):
         key = name.upper()
@@ -896,7 +893,8 @@ class WSGIApplication(object):
         from wsgiref.simple_server import make_server
         print('application (%s) will start at %s:%s...' %
               (self._document_root, host, port))
-        server = make_server(host, port, self.get_wsgi_application(debug=True))
+        server = make_server(
+            host, port, self.get_wsgi_application(debug=True))
         server.serve_forever()
 
 wsgi = WSGIApplication(os.path.dirname(os.path.abspath(__file__)))
