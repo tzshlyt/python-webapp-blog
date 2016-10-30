@@ -23,9 +23,6 @@ def _gen_sql(table_name, mappings):
                    (f.name, ddl) or ' `%s` %s not null,' % (f.name, ddl))
     sql.append(' primary key(`%s`)' % pk)
     sql.append(');')
-
-    print '---sql: '
-    print '\n'.join(sql)
     return '\n'.join(sql)
 
 
@@ -47,8 +44,6 @@ class Field(object):
     @property
     def default(self):
         d = self._default
-        print '---default: '
-        print d
         return d() if callable(d) else d
 
     def __str__(self):
@@ -130,9 +125,6 @@ class VersionField(Field):
 class ModelMetaclass(type):
 
     def __new__(cls, name, bases, attrs):
-
-        print '---name: ' + name
-
         if name == 'Model':
             return type.__new__(cls, name, bases, attrs)
 
@@ -165,17 +157,10 @@ class ModelMetaclass(type):
                             'NOTE: change primary key to non-nullable.')
                         v.nullable = False
                     primary_key = v
-
                 mappings[k] = v
-
-        print '---mappings: '
-        print mappings
 
         if not primary_key:
             raise TypeError('Primary key not defined in class: %s' % name)
-
-        print '---attrs: '
-        print attrs
 
         for k in mappings.iterkeys():
             attrs.pop(k)
@@ -190,9 +175,6 @@ class ModelMetaclass(type):
                 attrs[trigger] = None
 
         _gen_sql(attrs['__table__'], mappings)
-        print '---attrs change: '
-        print attrs
-
         return type.__new__(cls, name, bases, attrs)
 
 
@@ -219,8 +201,6 @@ class Model(dict):
 
     @classmethod
     def find_first(cls, where, *args):
-        print where
-        print args
         d = db.select_one('select * from %s %s' %
                           (cls.__table__, where), *args)
         return cls(**d) if d else None
@@ -279,9 +259,6 @@ class Model(dict):
                 if not hasattr(self, k):
                     setattr(self, k, v.default)
                 params[v.name] = getattr(self, k)
-
-        print params
-        print self.__table__
         db.insert('%s' % self.__table__, **params)
         return self
 
