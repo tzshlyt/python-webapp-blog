@@ -260,7 +260,7 @@ def found(logging):
     return Redirection(302, location)
 
 
-def seeoothher(location):
+def seeother(location):
     return RedirectError(303, location)
 
 
@@ -283,7 +283,7 @@ def _quote(s, encoding='utf-8'):
 
 
 def _unquote(s, encoding='utf-8'):
-    return urllib.unquote(s), decode(encoding)
+    return urllib.unquote(s).decode(encoding)
 
 
 def get(path):
@@ -421,7 +421,8 @@ class Request(object):
                 return [_to_unicode(i.value) for i in item]
             if item.filename:
                 return MultipartFile(item)
-            return
+            return _to_unicode(item.value)
+
         fs = cgi.FieldStorage(
             fp=self._environ['wsgi.input'], environ=self._environ, keep_blank_values=True)
         inputs = dict()
@@ -589,7 +590,7 @@ class Response(object):
     def set_cookie(self, name, value, max_age=None, expires=None, path='/', domain=None, secure=False, http_only=True):
         if not hasattr(self, '_cookies'):
             self._cookies = {}
-        L = ['%s=%s' % (utils.quote(name), utils.quote(value))]
+        L = ['%s=%s' % (_quote(name), _quote(value))]
         if expires is not None:
             if isinstance(expires, (float, int, long)):
                 L.append('Expires=%s' % datetime.datetime.fromtimestamp(
@@ -718,6 +719,7 @@ def interceptor(pattern='/'):
     def _decorator(func):
         func.__interceptor__ = _build_pattern_fn(pattern)
         return func
+    return _decorator
 
 
 def _build_interceptor_fn(func, next):
