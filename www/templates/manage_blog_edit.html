@@ -18,11 +18,7 @@ function initVue(blog){
             submit : function(even) {
                 event.preventDefault();
                 startLoading();
-                postApi(action, {
-                    name : this.name,
-                    summary : this.summary,
-                    content : this.content
-                }, function(err, r) {
+                postApi(action, this.$data, function(err, r) {
                     if (err) {
                         showError(err);
                     }else {
@@ -38,6 +34,23 @@ function initVue(blog){
     });
 }
 
+{% if id %}
+
+$(function () {
+    startLoading();
+    getApi('/api/blogs/{{ id }}', function (err, blog) {
+        if (err) {
+            showError(err);
+        }
+        else {
+            stopLoading();
+            initVue(blog);
+        }
+    });
+});
+
+{% else %}
+
 $(function(){
     initVue({
         name: '',
@@ -45,6 +58,8 @@ $(function(){
         content: ''
     });
 })
+
+{% endif %}
 
 </script>
 
