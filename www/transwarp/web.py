@@ -903,5 +903,3 @@ wsgi = WSGIApplication(os.path.dirname(os.path.abspath(__file__)))
 
 if __name__ == '__main__':
     wsgi.run()
-else:
-    application = wsgi.get_wsgi_application()
